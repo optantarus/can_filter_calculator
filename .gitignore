@@ -1,0 +1,6 @@
+# gitignore file of can filter calculator project
+
+
+# ignore temporary files
+.mypy_cache
+__pycache__
