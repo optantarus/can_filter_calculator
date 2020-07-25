@@ -28,9 +28,7 @@ class CanFilterCalc:
         '''Calculate CAN Filter.
         '''
 
-        # convert CAN ID numbers into binary strings with width of bitsize
-        for num in self.canIds:
-            self.canIdsStrings.append('{num:0{bitSize}b}'.format(num = num, bitSize = self.idBitSize)) 
+        self._convertIdsToStrings()
 
         # initialize variables to store best filter values
         minLength = self.numFilter*pow(2, self.idBitSize)
@@ -119,6 +117,14 @@ class CanFilterCalc:
         with open(fileName, 'r') as file:
             for line in file:
                 self.canIds.append(int(line, 16))
+
+           
+    def _convertIdsToStrings(self) -> None:
+        '''convert CAN ID numbers into binary strings with width of bitsize.
+        '''
+        
+        for num in self.canIds:
+            self.canIdsStrings.append('{num:0{bitSize}b}'.format(num = num, bitSize = self.idBitSize)) 
 
 
 if __name__ == '__main__':
