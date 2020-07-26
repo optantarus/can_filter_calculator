@@ -126,9 +126,7 @@ class CanFilterCalc:
         for num in self.canIds:
             self.canIdsStrings.append('{num:0{bitSize}b}'.format(num = num, bitSize = self.idBitSize)) 
 
-
-if __name__ == '__main__':
-
+def main():
     canCalc = CanFilterCalc(sys.argv)
     bestLists, bestFilters, minLength = canCalc.calc()
     
@@ -137,4 +135,9 @@ if __name__ == '__main__':
     print("Lists: ", bestLists, "\n")
     print("Filters: ", bestFilters, "\n")
     print("Sum messages pass: ", minLength)
+
+
+if __name__ == '__main__':
+    main()
+    
         
