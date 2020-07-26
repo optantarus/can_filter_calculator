@@ -68,9 +68,22 @@ Also take a look at the example folder.
 +-- example/ —> folder to show usage
 |   +-- can_ids.txt    -> file with example CAN IDs
 |   +-- run_example.sh -> execute can_filter_calc.py
+|   +-- install_run_example.sh -> create virtual environment, install package with setuy.py and execute can_filter_calc
+|
++-- test/ -> folder with unit tests
+|   +-- test_can_ids_29bit.txt -> file with 29 bit CAN IDs for unit tests
+|   +-- test_can_ids_11bit.txt -> file with 11 bit CAN IDs for unit tests
+|   +-- test_can_filter_calc.py -> file with unit tests
+|
 +-- LICENSE.txt —> License agreement
 |
 +-- README.md —> general information
+|
++-- setup.cfg —> general configuration
+|
++-- setup.py —> setuptools configuration
+|
++-- requirements.txt —> required packages to run can_filter_calc
 |
 +-- .project      -> Eclipse Pydev project files
 +-- .pydevproject -> Eclipse Pydev project files

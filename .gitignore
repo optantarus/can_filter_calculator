@@ -4,3 +4,5 @@
 # ignore temporary files
 .mypy_cache
 __pycache__
+
+example/env

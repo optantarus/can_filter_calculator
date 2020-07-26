@@ -6,6 +6,7 @@ This little script takes a text file with CAN IDs and calculate the required
 CAN filter.
 '''
 
+import sys
 import argparse
 import more_itertools
 
@@ -13,7 +14,7 @@ from typing import List, Tuple
 
 class CanFilterCalc:
 
-    def __init__(self):
+    def __init__(self, argv: List[str]):
 
         self.canIds: List[int] = []
         self.canIdsStrings: List[str] = []
@@ -21,15 +22,13 @@ class CanFilterCalc:
         self.numFilter: int = 0
 
         # parse comand line arguments and set canIds, idBitSize and numFilter
-        self._parseArguments()
+        self._parseArguments(argv)
 
-    def calc(self) -> None:
+    def calc(self) -> Tuple[List[List[str]], List[str], int] :
         '''Calculate CAN Filter.
         '''
 
-        # convert CAN ID numbers into binary strings with width of bitsize
-        for num in self.canIds:
-            self.canIdsStrings.append('{num:0{bitSize}b}'.format(num = num, bitSize = self.idBitSize)) 
+        self._convertIdsToStrings()
 
         # initialize variables to store best filter values
         minLength = self.numFilter*pow(2, self.idBitSize)
@@ -52,11 +51,9 @@ class CanFilterCalc:
                 minLength = lengthPart
                 bestFilters = filtersPart
                 bestLists = part
+                
+        return bestLists, bestFilters, minLength
 
-        print("\nResult:\n")
-        print("Lists: ", bestLists, "\n")
-        print("Filters: ", bestFilters, "\n")
-        print("Sum messages pass: ", minLength)
 
     def calcFilter(self, idList: List[str]) -> Tuple[int, str]:
         '''Calculate canFilter for list of CAN IDs.
@@ -96,16 +93,16 @@ class CanFilterCalc:
         return numPassIds, canFilter
 
 
-    def _parseArguments(self) -> None:
+    def _parseArguments(self, argv: List[str]) -> None:
         '''Parse comand line arguments.
         '''
 
-        cmdParser = argparse.ArgumentParser()
+        cmdParser = argparse.ArgumentParser(description="Calculate filter for given CAN IDs")
         cmdParser.add_argument("-f", "--file", required=True, help="name of file with CAN ids")
         cmdParser.add_argument("-s", "--size", required=True, help="bit size of CAN IDs")
         cmdParser.add_argument("-n", "--num", required=True, help="number of filters")
 
-        self.cmdArgs = cmdParser.parse_args()
+        self.cmdArgs = cmdParser.parse_args(argv[1:])
 
         self.idBitSize = int(self.cmdArgs.size)
         self.numFilter = int(self.cmdArgs.num)
@@ -121,8 +118,26 @@ class CanFilterCalc:
             for line in file:
                 self.canIds.append(int(line, 16))
 
+           
+    def _convertIdsToStrings(self) -> None:
+        '''convert CAN ID numbers into binary strings with width of bitsize.
+        '''
+        
+        for num in self.canIds:
+            self.canIdsStrings.append('{num:0{bitSize}b}'.format(num = num, bitSize = self.idBitSize)) 
+
+def main():
+    canCalc = CanFilterCalc(sys.argv)
+    bestLists, bestFilters, minLength = canCalc.calc()
+    
+    
+    print("\nResult:\n")
+    print("Lists: ", bestLists, "\n")
+    print("Filters: ", bestFilters, "\n")
+    print("Sum messages pass: ", minLength)
+
 
 if __name__ == '__main__':
-
-    canCalc = CanFilterCalc()
-    canCalc.calc()
+    main()
+    
+        
