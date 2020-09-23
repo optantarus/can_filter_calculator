@@ -35,10 +35,11 @@ can_filter_calc.py is a command line tool. It needs to be called with the follow
 - '-f'    file with CAN IDs (one ID per line in hex format)  
 - '-s'    bit size of the CAN IDs (11 or 29)  
 - '-n'    number of filters to use  
+- '-o'    file to write results to (optional)  
 
 So for example:  can_filter_calc.py -f=can_ids.txt -s=11 -n=2
 
-It outputs the following:
+It outputs the following to console window:
 
    > Result:
    > 
@@ -46,7 +47,7 @@ It outputs the following:
    > 
    > Filters:  ['00000X1X1X1', '00000000010'] 
    > 
-   > Sum messages pass:  3
+   > Sum messages pass:  6
    
 Lists  (a list of lists) shows the used partitioning of the CAN IDs. So the first list corresponds to the first filter.
 
@@ -54,6 +55,17 @@ Filters shows the calculated CAN filters. The can filter is represented as a str
 '0' or '1' means an CAN ID has to have that value. 'X' means don't care.
 
 Sum messages pass is the complete number of CAN IDs that can pass the calculated filters and are not specified in CAN ID list.
+
+If specified  a file is created in addition. It contains the following:
+
+   > Calculated CAN Filters [ filter : number of unwanted passing messages ]:  
+   > 0b00000X1X1X1 :     6 | 0b00000000010 :     0  
+   > 
+   > CAN messages assigned to filters [ bin : hex ]:  
+   > 0b00000111111 : 0x03f | 0b00000000010 : 0x002  
+   > 0b00000010101 : 0x015 |  
+
+Each column shows the calculated filter at the top and then all CAN message IDs used to calculate that filter.
 
 
 Also take a look at the example folder.
@@ -74,6 +86,7 @@ Also take a look at the example folder.
 |   +-- test_can_ids_29bit.txt -> file with 29 bit CAN IDs for unit tests
 |   +-- test_can_ids_11bit.txt -> file with 11 bit CAN IDs for unit tests
 |   +-- test_can_filter_calc.py -> file with unit tests
+|   +-- result_test_*.txt -> output files of the test cases
 |
 +-- LICENSE.txt —> License agreement
 |

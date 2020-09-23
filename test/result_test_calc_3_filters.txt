@@ -1,0 +1,5 @@
+Calculated CAN Filters [ filter : number of unwanted passing messages ]:
+0b00000111111 :     0 | 0b00000010101 :     0 | 0b00000000010 :     0
+
+CAN messages assigned to filters [ bin : hex ]:
+0b00000111111 : 0x03f | 0b00000010101 : 0x015 | 0b00000000010 : 0x002

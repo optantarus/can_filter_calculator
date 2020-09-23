@@ -8,7 +8,9 @@ CAN filter.
 
 import sys
 import argparse
+import math
 import more_itertools
+import itertools
 
 from typing import List, Tuple
 
@@ -18,8 +20,13 @@ class CanFilterCalc:
 
         self.canIds: List[int] = []
         self.canIdsStrings: List[str] = []
+        self.passMessagesMin: List[int] = []
         self.idBitSize: int = 0
         self.numFilter: int = 0
+        self.minLength: int = 0
+        self.bestLists: List[List[str]] = []
+        self.bestFilters: List[str] = []
+        self.outputFile: str = ""
 
         # parse comand line arguments and set canIds, idBitSize and numFilter
         self._parseArguments(argv)
@@ -31,28 +38,35 @@ class CanFilterCalc:
         self._convertIdsToStrings()
 
         # initialize variables to store best filter values
-        minLength = self.numFilter*pow(2, self.idBitSize)
-        bestLists = []
-        bestFilters = []
+        self.minLength = self.numFilter*pow(2, self.idBitSize)
+        self.bestLists = []
+        self.bestFilters = []
+        self.passMessagesMin = []
 
         # loop through all variants to partition the CAN IDs to the given filter number
         for part in more_itertools.set_partitions(self.canIdsStrings, self.numFilter):
             lengthPart = 0
             filtersPart = []
+            passMessages = []
 
             # loop through lists for all CAN filters
             for idList in part:
                 lengthList, canFilter = self.calcFilter(idList)
                 
                 lengthPart += lengthList
+                passMessages.append(lengthList)
                 filtersPart.append(canFilter)
 
-            if(minLength > lengthPart):
-                minLength = lengthPart
-                bestFilters = filtersPart
-                bestLists = part
+            if(self.minLength > lengthPart):
+                self.minLength = lengthPart
+                self.bestFilters = filtersPart
+                self.bestLists = part
+                self.passMessagesMin = passMessages
                 
-        return bestLists, bestFilters, minLength
+        if self.outputFile:
+            self._writeToFile()
+                
+        return self.bestLists, self.bestFilters, self.minLength
 
 
     def calcFilter(self, idList: List[str]) -> Tuple[int, str]:
@@ -92,6 +106,42 @@ class CanFilterCalc:
 
         return numPassIds, canFilter
 
+    def _writeToFile(self):
+        '''Write result of execution of calc to file.
+        '''
+
+        # calculate length of CAN identifier in hex
+        idLength = math.ceil(self.idBitSize / 4)
+        stringLists = []
+        headers = []
+    
+        # create list of lists with strings of all CAN messages IDs used for each filter
+        for idList in self.bestLists:
+            tempList = []
+            for canId in idList:
+                # create string with CAN ID in binary and hex format
+                tempList.append('0b' + canId + ' : ' + '0x{num:0{length}x}'.format(num = int(canId, 2), length = idLength))
+                
+            stringLists.append(tempList)
+    
+        # create list with strings of all CAN filters
+        for fil, msg in zip(self.bestFilters, self.passMessagesMin):
+            # create string with CAN filter and number of messages that pass filter
+            headers.append("0b" + fil + " : " + "{num:{length}d}".format(num = msg, length = idLength + 2))
+    
+        # add fill entries so that all lists of CAN message IDs have same length to easy print a table
+        tableList = list(itertools.zip_longest(*stringLists, fillvalue=" "*(self.idBitSize + 3 + idLength + 4)))
+        
+        # print created strings to file
+        with open(self.outputFile, 'w') as file:
+            file.write("Calculated CAN Filters [ filter : number of unwanted passing messages ]:\n")
+            file.write(" | ".join(headers) + "\n")
+            file.write("\n")
+            
+            file.write("CAN messages assigned to filters [ bin : hex ]:\n")
+            for line in tableList:
+                file.write(" | ".join(line) + "\n")
+
 
     def _parseArguments(self, argv: List[str]) -> None:
         '''Parse comand line arguments.
@@ -101,11 +151,14 @@ class CanFilterCalc:
         cmdParser.add_argument("-f", "--file", required=True, help="name of file with CAN ids")
         cmdParser.add_argument("-s", "--size", required=True, help="bit size of CAN IDs")
         cmdParser.add_argument("-n", "--num", required=True, help="number of filters")
+        cmdParser.add_argument("-o", "--out", required=False, help="file to write results to")
 
         self.cmdArgs = cmdParser.parse_args(argv[1:])
 
         self.idBitSize = int(self.cmdArgs.size)
         self.numFilter = int(self.cmdArgs.num)
+        
+        self.outputFile = self.cmdArgs.out
 
         self._readIdsFromFile(self.cmdArgs.file)
 
@@ -130,13 +183,12 @@ def main():
     canCalc = CanFilterCalc(sys.argv)
     bestLists, bestFilters, minLength = canCalc.calc()
     
-    
     print("\nResult:\n")
     print("Lists: ", bestLists, "\n")
     print("Filters: ", bestFilters, "\n")
     print("Sum messages pass: ", minLength)
 
-
+    
 if __name__ == '__main__':
     main()
     
