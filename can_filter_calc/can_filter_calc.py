@@ -12,7 +12,11 @@ import math
 import more_itertools
 import itertools
 
+import time
+
 from typing import List, Tuple
+from operator import iand, ior
+from functools import reduce
 
 class CanFilterCalc:
 
@@ -24,8 +28,11 @@ class CanFilterCalc:
         self.idBitSize: int = 0
         self.numFilter: int = 0
         self.minLength: int = 0
-        self.bestLists: List[List[str]] = []
-        self.bestFilters: List[str] = []
+        self.bestLists: List[List[int]] = []
+        self.bestListsStr: List[List[str]] = []
+        self.bestFilters: List[int] = []
+        self.bestMasks: List[int] = []
+        self.bestFiltersStr: List[str] = []
         self.outputFile: str = ""
 
         # parse comand line arguments and set canIds, idBitSize and numFilter
@@ -35,76 +42,105 @@ class CanFilterCalc:
         '''Calculate CAN Filter.
         '''
 
-        self._convertIdsToStrings()
-
         # initialize variables to store best filter values
         self.minLength = self.numFilter*pow(2, self.idBitSize)
         self.bestLists = []
         self.bestFilters = []
         self.passMessagesMin = []
+        self.bestFiltersStr = []
+        self.bestListsStr = []
 
         # loop through all variants to partition the CAN IDs to the given filter number
-        for part in more_itertools.set_partitions(self.canIdsStrings, self.numFilter):
+        for part in more_itertools.set_partitions(self.canIds, self.numFilter):
             lengthPart = 0
             filtersPart = []
+            masksPart = []
             passMessages = []
 
             # loop through lists for all CAN filters
             for idList in part:
-                lengthList, canFilter = self.calcFilter(idList)
+                lengthList, canMask, canFilter = self.calcFilter(idList)
                 
                 lengthPart += lengthList
                 passMessages.append(lengthList)
                 filtersPart.append(canFilter)
+                masksPart.append(canMask)
 
             if(self.minLength > lengthPart):
                 self.minLength = lengthPart
                 self.bestFilters = filtersPart
+                self.bestMasks = masksPart
                 self.bestLists = part
                 self.passMessagesMin = passMessages
+        
+        for mask, fil in zip(self.bestMasks, self.bestFilters):
+            self.bestFiltersStr.append(self._filterStr(mask, fil))   
+        
+        tempList = []
+        
+        for idList in self.bestLists:
+            for canId in idList:
+                tempList.append("{num:0{length}b}".format(num = canId, length = self.idBitSize))
+            self.bestListsStr.append(tempList)
+            tempList = []
                 
         if self.outputFile:
             self._writeToFile()
                 
-        return self.bestLists, self.bestFilters, self.minLength
+        return self.bestListsStr, self.bestFiltersStr, self.minLength
 
 
-    def calcFilter(self, idList: List[str]) -> Tuple[int, str]:
+    def calcFilter(self, idList: List[int]) -> Tuple[int, int]:
         '''Calculate canFilter for list of CAN IDs.
         
-        The canFilter is representated as a string. '0' or '1' means
-        an ID has to have that value. 'X' means don't care.
+        The canFilter is representated as a mask and a filter.
         
-        @param[in]   idList      list of CAN IDs as binary strings
+        @param[in]   idList      list of CAN IDs as ints
         @retval      numPassIds  number of CAN IDs that pass canFilter
-        @retval      canFilter      represensation of canFilter
+        @retval      canMask     represensation of can mask
+        @retval      canFilter   represensation of can filter
         '''
-        canFilter = ''
+        canMask = 0
+        canFilter = 0
         numPassIds = 0
 
-        # loop through all bits of the IDs
-        for x in range(0, self.idBitSize):
-            allZeros = True
-            allOnes = True
-
-            # loop through all IDs
-            for item in idList:
-                if item[x] == '0':
-                    allOnes = False
-                    
-                if item[x] == '1':
-                    allZeros = False
-
-            if allZeros:
-                canFilter = canFilter + '0'
-            elif allOnes:
-                canFilter = canFilter + '1'
-            else:
-                canFilter = canFilter + 'X'        
+        # calculate mask with xor over all IDs in list
+        canFilter = reduce(iand, idList)
+        canMask = reduce(ior, idList) ^ canFilter
+       
         # number of unwanted messages that pass filter
-        numPassIds = pow(2, canFilter.count('X')) - len(idList)
+        if(len(idList) > 1):
+            numPassIds = pow(2, str(bin(canMask)).count('1')) - len(idList)
+        else:
+            numPassIds = 0
 
-        return numPassIds, canFilter
+        return numPassIds, canMask, canFilter
+
+    def _filterStr(self, canMask: int, canFilter: int) -> str:
+        '''Create string representation of can mask and can filter.
+        
+        '0' or '1' means an ID has to have that value. 'X' means don't care
+        
+        @param[in]   canMask      can mask
+        @param[in]   canFilter    can filter
+        @retval      canFilterRep represensation of can filter
+        '''
+        
+        canFilterRep = ""
+        canMaskStr = "{num:0{length}b}".format(num = canMask, length = self.idBitSize)
+        canFilterStr = "{num:0{length}b}".format(num = canFilter, length = self.idBitSize)
+        
+        # loop through all bits of the ID size
+        for x in range(0, self.idBitSize):
+
+            if canMaskStr[x] == '1':
+                canFilterRep = canFilterRep + 'X'
+            elif canFilterStr[x] == '1':
+                canFilterRep = canFilterRep + '1'
+            else:
+                canFilterRep = canFilterRep + '0' 
+        
+        return canFilterRep
 
     def _writeToFile(self):
         '''Write result of execution of calc to file.
@@ -120,12 +156,12 @@ class CanFilterCalc:
             tempList = []
             for canId in idList:
                 # create string with CAN ID in binary and hex format
-                tempList.append('0b' + canId + ' : ' + '0x{num:0{length}x}'.format(num = int(canId, 2), length = idLength))
+                tempList.append("0b{num:0{length}b}".format(num = canId, length = self.idBitSize) + " : " + "0x{num:0{length}x}".format(num = canId, length = idLength))
                 
             stringLists.append(tempList)
     
         # create list with strings of all CAN filters
-        for fil, msg in zip(self.bestFilters, self.passMessagesMin):
+        for fil, msg in zip(self.bestFiltersStr, self.passMessagesMin):
             # create string with CAN filter and number of messages that pass filter
             headers.append("0b" + fil + " : " + "{num:{length}d}".format(num = msg, length = idLength + 2))
     
@@ -180,13 +216,20 @@ class CanFilterCalc:
             self.canIdsStrings.append('{num:0{bitSize}b}'.format(num = num, bitSize = self.idBitSize)) 
 
 def main():
+    
+    begin = time.time()
+    
     canCalc = CanFilterCalc(sys.argv)
     bestLists, bestFilters, minLength = canCalc.calc()
+    
+    end = time.time()
     
     print("\nResult:\n")
     print("Lists: ", bestLists, "\n")
     print("Filters: ", bestFilters, "\n")
-    print("Sum messages pass: ", minLength)
+    print("Sum messages pass: ", minLength, "\n\n")
+    
+    print("Time:", end - begin, "s")
 
     
 if __name__ == '__main__':
