@@ -113,14 +113,16 @@ class CanFilterCalc:
         canMask = 0
         canFilter = 0
         numPassIds = 0
+        lenList = 0;
 
         # calculate mask with xor over all IDs in list
         canFilter = reduce(iand, idList)
         canMask = reduce(ior, idList) ^ canFilter
        
         # number of unwanted messages that pass filter
-        if(len(idList) > 1):
-            numPassIds = pow(2, bin(canMask).count('1')) - len(idList)
+        lenList = len(idList)
+        if(lenList > 1):
+            numPassIds = pow(2, bin(canMask).count('1')) - lenList
         else:
             numPassIds = 0
 
