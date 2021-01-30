@@ -50,28 +50,8 @@ class CanFilterCalc:
         self.bestFiltersStr = []
         self.bestListsStr = []
 
-        # loop through all variants to partition the CAN IDs to the given filter number
-        for part in more_itertools.set_partitions(self.canIds, self.numFilter):
-            lengthPart = 0
-            filtersPart = []
-            masksPart = []
-            passMessages = []
+        self.optimalFilter();
 
-            # loop through lists for all CAN filters
-            for idList in part:
-                lengthList, canMask, canFilter = self.calcFilter(idList)
-                
-                lengthPart += lengthList
-                passMessages.append(lengthList)
-                filtersPart.append(canFilter)
-                masksPart.append(canMask)
-
-            if(self.minLength > lengthPart):
-                self.minLength = lengthPart
-                self.bestFilters = filtersPart
-                self.bestMasks = masksPart
-                self.bestLists = part
-                self.passMessagesMin = passMessages
         
         for mask, fil in zip(self.bestMasks, self.bestFilters):
             self.bestFiltersStr.append(self._filterStr(mask, fil))   
@@ -88,6 +68,36 @@ class CanFilterCalc:
             self._writeToFile()
                 
         return self.bestListsStr, self.bestFiltersStr, self.minLength
+
+
+    def optimalFilter(self):
+        '''Calculate optimal CAN filter.
+        
+        Iterates through all possible filters and finds optimal one.
+        '''
+        # loop through all variants to partition the CAN IDs to the given filter number
+        for part in more_itertools.set_partitions(self.canIds, self.numFilter):
+            lengthPart = 0
+            filtersPart = []
+            masksPart = []
+            passMessages = []
+
+
+            # loop through lists for all CAN filters
+            for idList in part:
+                lengthList, canMask, canFilter = self.calcFilter(idList)
+                
+                lengthPart += lengthList
+                passMessages.append(lengthList)
+                filtersPart.append(canFilter)
+                masksPart.append(canMask)
+
+            if(self.minLength > lengthPart):
+                self.minLength = lengthPart
+                self.bestFilters = filtersPart
+                self.bestMasks = masksPart
+                self.bestLists = part
+                self.passMessagesMin = passMessages
 
 
     def calcFilter(self, idList: List[int]) -> Tuple[int, int]:
@@ -110,7 +120,7 @@ class CanFilterCalc:
        
         # number of unwanted messages that pass filter
         if(len(idList) > 1):
-            numPassIds = pow(2, str(bin(canMask)).count('1')) - len(idList)
+            numPassIds = pow(2, bin(canMask).count('1')) - len(idList)
         else:
             numPassIds = 0
 
