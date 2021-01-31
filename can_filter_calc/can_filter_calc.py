@@ -11,8 +11,12 @@ import argparse
 import math
 import more_itertools
 import itertools
+import copy
 
 import time
+import random
+
+import matplotlib.pyplot
 
 from typing import List, Tuple
 from operator import iand, ior
@@ -41,7 +45,7 @@ class CanFilterCalc:
     def calc(self) -> Tuple[List[List[str]], List[str], int] :
         '''Calculate CAN Filter.
         '''
-
+        
         # initialize variables to store best filter values
         self.minLength = self.numFilter*pow(2, self.idBitSize)
         self.bestLists = []
@@ -50,7 +54,8 @@ class CanFilterCalc:
         self.bestFiltersStr = []
         self.bestListsStr = []
 
-        self.optimalFilter();
+        #self.optimalFilter()
+        self.simulatedAnnealing()
 
         
         for mask, fil in zip(self.bestMasks, self.bestFilters):
@@ -69,6 +74,125 @@ class CanFilterCalc:
                 
         return self.bestListsStr, self.bestFiltersStr, self.minLength
 
+    def simulatedAnnealing(self):
+        '''Calculate an filter by using the simulated annealing algorithm
+        '''
+        
+        # initialize values
+        newLists = []
+        numCanIds = len(self.canIds)
+        temp = 1.0
+        
+        bestValue = []
+        searchValue = []
+        repetitions= 1000
+        xAxis = range(0, repetitions)
+        
+        #initialize random number generator with system time (default)
+        random.seed()
+        
+        # create start solution
+        filtersList = self.createStartSolution()
+        
+        # set start values as best values
+        self.bestLists = filtersList
+        self.minLength, self.passMessagesMin, self.bestFilters, self.bestMasks  = self.calcFilters(filtersList)
+        
+        # initial set of old value
+        lengthPartOld = self.minLength
+        
+        # repetitions of simulated annealing algorithm
+        for i in range(0, repetitions):
+
+            # create new variant based on current
+            newLists = self.createNeighbour(filtersList)
+            
+            # calculate ranking values for new variant
+            lengthPart, passMessages, filtersPart, masksPart = self.calcFilters(newLists)
+            
+            # new variant lets equal or less messages pass
+            if(lengthPartOld >= lengthPart):
+                filtersList = newLists
+            # new variant lets more messages pass
+            else:
+                # accept new variant if a certain propablility
+                diff = (lengthPart - lengthPartOld) / numCanIds
+                expo = diff / temp
+                expoVal = random.expovariate(expo)
+                uniVal = random.random()
+                
+                if expoVal >= uniVal:
+                    filtersList = newLists
+            
+            # new variant let less messages pass -> save as new best solution        
+            if(self.minLength > lengthPart):
+                self.minLength = lengthPart
+                self.bestFilters = filtersPart
+                self.bestMasks = masksPart
+                self.bestLists = newLists
+                self.passMessagesMin = passMessages
+            
+            # save value for graph view
+            bestValue.append(self.minLength)
+            searchValue.append(lengthPart)
+            
+            # decrease temperature    
+            temp = temp * 0.8
+        
+        # draw plots    
+        matplotlib.pyplot.plot(xAxis, bestValue, label = "best")
+        matplotlib.pyplot.plot(xAxis, searchValue, label = "search")
+        matplotlib.pyplot.legend()
+        matplotlib.pyplot.show()
+            
+        
+    def createStartSolution(self):
+        '''Create an initial solution for simulated annealing algorithm.
+        '''
+        
+        # calculate number of messages per filter if equally spread across all filters
+        numFil = math.ceil(len(self.canIds) / self.numFilter)
+        
+        # sort CAN ID list
+        self.canIds.sort()
+        # assign equal number of CAN IDs to each filter
+        lists = [self.canIds[i:i + numFil] for i in range(0, len(self.canIds), numFil)]
+        
+        return lists
+
+        
+    def createNeighbour(self, lists):
+        '''Create variant of given lists.
+        
+        Randomly chose an element from a list and move it to another.
+        
+        @param[in]   lists      list of list of CAN IDs for each filter
+        @retval      newLists   modified list of lists
+        '''
+        
+        newLists = copy.deepcopy(lists)
+        
+        # chose random filter to pick element from
+        randomSourceFilter = random.randint(0, (self.numFilter-1))
+        # only use number if that list is not empty after removing one element
+        while len(newLists[randomSourceFilter]) < 2:
+            randomSourceFilter = random.randint(0, (self.numFilter-1))
+        
+        # chose random filter to move element to
+        randomDestFilter = randomSourceFilter
+        # only use filter if not identical to source
+        while randomSourceFilter == randomDestFilter:
+            randomDestFilter = random.randint(0, (self.numFilter-1))
+        
+        # chose source element
+        randomElement = random.randint(0, (len(newLists[randomSourceFilter])-1))
+        
+        # move element
+        newLists[randomDestFilter].append(newLists[randomSourceFilter][randomElement])
+        newLists[randomSourceFilter].pop(randomElement)
+        
+        return newLists
+        
 
     def optimalFilter(self):
         '''Calculate optimal CAN filter.
@@ -82,15 +206,7 @@ class CanFilterCalc:
             masksPart = []
             passMessages = []
 
-
-            # loop through lists for all CAN filters
-            for idList in part:
-                lengthList, canMask, canFilter = self.calcFilter(idList)
-                
-                lengthPart += lengthList
-                passMessages.append(lengthList)
-                filtersPart.append(canFilter)
-                masksPart.append(canMask)
+            lengthPart, passMessages, filtersPart, masksPart = self.calcFilters(part)
 
             if(self.minLength > lengthPart):
                 self.minLength = lengthPart
@@ -98,6 +214,24 @@ class CanFilterCalc:
                 self.bestMasks = masksPart
                 self.bestLists = part
                 self.passMessagesMin = passMessages
+
+    def calcFilters(self, idLists):
+        lengthPart = 0
+        filtersPart = []
+        masksPart = []
+        passMessages = []
+
+
+        # loop through lists for all CAN filters
+        for idList in idLists:
+            lengthList, canMask, canFilter = self.calcFilter(idList)
+            
+            lengthPart += lengthList
+            passMessages.append(lengthList)
+            filtersPart.append(canFilter)
+            masksPart.append(canMask)
+            
+        return lengthPart, passMessages, filtersPart, masksPart
 
 
     def calcFilter(self, idList: List[int]) -> Tuple[int, int]:
@@ -113,14 +247,13 @@ class CanFilterCalc:
         canMask = 0
         canFilter = 0
         numPassIds = 0
-        lenList = 0;
-
+        lenList = len(idList)
         # calculate mask with xor over all IDs in list
-        canFilter = reduce(iand, idList)
-        canMask = reduce(ior, idList) ^ canFilter
+        if(lenList > 0):
+            canFilter = reduce(iand, idList)
+            canMask = reduce(ior, idList) ^ canFilter
        
         # number of unwanted messages that pass filter
-        lenList = len(idList)
         if(lenList > 1):
             numPassIds = pow(2, bin(canMask).count('1')) - lenList
         else:
