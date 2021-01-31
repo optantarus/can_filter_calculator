@@ -81,12 +81,26 @@ class CanFilterCalc:
         # initialize values
         newLists = []
         numCanIds = len(self.canIds)
-        temp = 1.0
+        mumPassMsgMax = self.numFilter*pow(2, self.idBitSize)
         
+        lastTempUpdate = 0
+        
+        # parameters
+        repetitions= 5000
+        temp = 1.0
+        coolingFactor = 0.95
+        repWithSameTemp = 100
+        decTemp = temp / repetitions
+        
+        # graph data
+        xAxis = range(0, repetitions)
+        diff = 0
+        accept = 0
+        acceptList = []
         bestValue = []
         searchValue = []
-        repetitions= 1000
-        xAxis = range(0, repetitions)
+        tempValue = []
+        diffValue = []
         
         #initialize random number generator with system time (default)
         random.seed()
@@ -116,13 +130,14 @@ class CanFilterCalc:
             # new variant lets more messages pass
             else:
                 # accept new variant if a certain propablility
-                diff = (lengthPart - lengthPartOld) / numCanIds
+                diff = (lengthPart - lengthPartOld) / mumPassMsgMax
                 expo = diff / temp
                 expoVal = random.expovariate(expo)
                 uniVal = random.random()
                 
                 if expoVal >= uniVal:
                     filtersList = newLists
+                    accept += 1
             
             # new variant let less messages pass -> save as new best solution        
             if(self.minLength > lengthPart):
@@ -135,14 +150,30 @@ class CanFilterCalc:
             # save value for graph view
             bestValue.append(self.minLength)
             searchValue.append(lengthPart)
+            diffValue.append(diff)
+            tempValue.append(temp)
+            acceptList.append(accept)
             
-            # decrease temperature    
-            temp = temp * 0.8
+            # decrease temperature
+            if repWithSameTemp > (i-lastTempUpdate):
+                lastTempUpdate = i  
+                temp = temp * coolingFactor
+             
+            #temp = temp - decTemp
         
         # draw plots    
         matplotlib.pyplot.plot(xAxis, bestValue, label = "best")
         matplotlib.pyplot.plot(xAxis, searchValue, label = "search")
         matplotlib.pyplot.legend()
+        
+        matplotlib.pyplot.figure()
+        matplotlib.pyplot.plot(xAxis, tempValue, label = "temp")
+        matplotlib.pyplot.plot(xAxis, diffValue, label = "diff")
+        
+        matplotlib.pyplot.figure()
+        matplotlib.pyplot.plot(xAxis, acceptList, label = "accept")
+        matplotlib.pyplot.legend()
+        
         matplotlib.pyplot.show()
             
         
