@@ -38,6 +38,7 @@ class CanFilterCalc:
         self.bestMasks: List[int] = []
         self.bestFiltersStr: List[str] = []
         self.outputFile: str = ""
+        self.algorithm: str = "OPT"
 
         # parse comand line arguments and set canIds, idBitSize and numFilter
         self._parseArguments(argv)
@@ -54,9 +55,12 @@ class CanFilterCalc:
         self.bestFiltersStr = []
         self.bestListsStr = []
 
-        #self.optimalFilter()
-        self.simulatedAnnealing()
-
+        # choose algorithm to use
+        if self.algorithm == "SA":
+            self.simulatedAnnealing()
+        else:
+            self.optimalFilter()
+            
         
         for mask, fil in zip(self.bestMasks, self.bestFilters):
             self.bestFiltersStr.append(self._filterStr(mask, fil))   
@@ -80,20 +84,22 @@ class CanFilterCalc:
         
         # initialize values
         newLists = []
-        numCanIds = len(self.canIds)
         mumPassMsgMax = self.numFilter*pow(2, self.idBitSize)
         
         lastTempUpdate = 0
         
         # parameters
         repetitions= 5000
+        epochs = 100
         temp = 1.0
         coolingFactor = 0.95
         repWithSameTemp = 100
         decTemp = temp / repetitions
         
+        curTemp = temp
+        
         # graph data
-        xAxis = range(0, repetitions)
+        xAxis = range(0, repetitions*epochs)
         diff = 0
         accept = 0
         acceptList = []
@@ -114,52 +120,60 @@ class CanFilterCalc:
         
         # initial set of old value
         lengthPartOld = self.minLength
+        lengthPartOldStart = lengthPartOld
         
+        for j in range(0, epochs):
         # repetitions of simulated annealing algorithm
-        for i in range(0, repetitions):
-
-            # create new variant based on current
-            newLists = self.createNeighbour(filtersList)
-            
-            # calculate ranking values for new variant
-            lengthPart, passMessages, filtersPart, masksPart = self.calcFilters(newLists)
-            
-            # new variant lets equal or less messages pass
-            if(lengthPartOld >= lengthPart):
-                filtersList = newLists
-            # new variant lets more messages pass
-            else:
-                # accept new variant if a certain propablility
-                diff = (lengthPart - lengthPartOld) / mumPassMsgMax
-                expo = diff / temp
-                expoVal = random.expovariate(expo)
-                uniVal = random.random()
+            for i in range(0, repetitions):
+    
+                # create new variant based on current
+                newLists = self.createNeighbour(filtersList)
                 
-                if expoVal >= uniVal:
+                # calculate ranking values for new variant
+                lengthPart, passMessages, filtersPart, masksPart = self.calcFilters(newLists)
+                
+                # new variant lets equal or less messages pass
+                if(lengthPartOld >= lengthPart):
                     filtersList = newLists
-                    accept += 1
-            
-            # new variant let less messages pass -> save as new best solution        
-            if(self.minLength > lengthPart):
-                self.minLength = lengthPart
-                self.bestFilters = filtersPart
-                self.bestMasks = masksPart
-                self.bestLists = newLists
-                self.passMessagesMin = passMessages
-            
-            # save value for graph view
-            bestValue.append(self.minLength)
-            searchValue.append(lengthPart)
-            diffValue.append(diff)
-            tempValue.append(temp)
-            acceptList.append(accept)
-            
-            # decrease temperature
-            if repWithSameTemp > (i-lastTempUpdate):
-                lastTempUpdate = i  
-                temp = temp * coolingFactor
-             
-            #temp = temp - decTemp
+                # new variant lets more messages pass
+                else:
+                    # accept new variant if a certain propablility
+                    diff = (lengthPart - lengthPartOld) / mumPassMsgMax
+                    expo = diff / temp
+                    #expoVal = random.expovariate(expo)
+                    expoVal = math.exp(-expo/temp)
+                    uniVal = random.random()
+                    
+                    if expoVal >= uniVal:
+                        filtersList = newLists
+                        accept += 1
+                
+                # new variant let less messages pass -> save as new best solution        
+                if(self.minLength > lengthPart):
+                    self.minLength = lengthPart
+                    self.bestFilters = filtersPart
+                    self.bestMasks = masksPart
+                    self.bestLists = newLists
+                    self.passMessagesMin = passMessages
+                
+                # save value for graph view
+                bestValue.append(self.minLength)
+                searchValue.append(lengthPart)
+                diffValue.append(diff)
+                tempValue.append(temp)
+                acceptList.append(accept)
+                
+                # decrease temperature
+                if repWithSameTemp > (i-lastTempUpdate):
+                    lastTempUpdate = i  
+                    curTemp = curTemp * coolingFactor
+                 
+                #temp = temp - decTemp
+                
+            lastTempUpdate = 0
+            curTemp = temp
+            filtersList = self.createStartSolution()
+            lengthPartOld = lengthPartOldStart
         
         # draw plots    
         matplotlib.pyplot.plot(xAxis, bestValue, label = "best")
@@ -174,7 +188,7 @@ class CanFilterCalc:
         matplotlib.pyplot.plot(xAxis, acceptList, label = "accept")
         matplotlib.pyplot.legend()
         
-        matplotlib.pyplot.show()
+        #matplotlib.pyplot.show()
             
         
     def createStartSolution(self):
@@ -364,6 +378,8 @@ class CanFilterCalc:
         cmdParser.add_argument("-s", "--size", required=True, help="bit size of CAN IDs")
         cmdParser.add_argument("-n", "--num", required=True, help="number of filters")
         cmdParser.add_argument("-o", "--out", required=False, help="file to write results to")
+        
+        cmdParser.add_argument("-a", "--algorithm", choices=["OPT","SA"], default="OPT", required=False, help="algorithm to use (default: OPT)")
 
         self.cmdArgs = cmdParser.parse_args(argv[1:])
 
@@ -371,6 +387,8 @@ class CanFilterCalc:
         self.numFilter = int(self.cmdArgs.num)
         
         self.outputFile = self.cmdArgs.out
+        
+        self.algorithm = self.cmdArgs.algorithm
 
         self._readIdsFromFile(self.cmdArgs.file)
 
