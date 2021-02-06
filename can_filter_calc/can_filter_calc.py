@@ -195,13 +195,12 @@ class CanFilterCalc:
         '''Create an initial solution for simulated annealing algorithm.
         '''
         
-        # calculate number of messages per filter if equally spread across all filters
-        numFil = math.ceil(len(self.canIds) / self.numFilter)
-        
         # sort CAN ID list
         self.canIds.sort()
         # assign equal number of CAN IDs to each filter
-        lists = [self.canIds[i:i + numFil] for i in range(0, len(self.canIds), numFil)]
+        listsIt = list(more_itertools.divide(self.numFilter, self.canIds))
+        
+        lists = [list(l) for l in listsIt]
         
         return lists
 
