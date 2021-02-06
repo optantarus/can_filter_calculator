@@ -49,12 +49,10 @@ class can_filter_calc_test(unittest.TestCase):
         ref_filters = ['00000111111', '00000010101', '00000000010']
         ref_num = 0
         
-        canCalc = can_filter_calc.CanFilterCalc(['', '-f=test_can_ids_11bit.txt', '-o=result_test_calc_3_filters.txt', '-s=11', '-n=3'])
-        test_lists, test_filters, test_num = canCalc.calc()
-        
-        self.assertEqual(ref_lists, test_lists, 'Error in calculated lists.')
-        self.assertEqual(ref_filters, test_filters, 'Error in calculated filters.')
-        self.assertEqual(ref_num, test_num, 'Error in calculated message number.')
+        with self.assertRaises(ValueError):
+            canCalc = can_filter_calc.CanFilterCalc(['', '-f=test_can_ids_11bit.txt', '-o=result_test_calc_3_filters.txt', '-s=11', '-n=3'])
+            test_lists, test_filters, test_num = canCalc.calc()
+
 
 
 if __name__ == "__main__":

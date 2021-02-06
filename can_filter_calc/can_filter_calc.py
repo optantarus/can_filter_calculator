@@ -16,6 +16,8 @@ import copy
 import time
 import random
 
+import os.path
+
 import matplotlib.pyplot
 
 from typing import List, Tuple
@@ -37,11 +39,18 @@ class CanFilterCalc:
         self.bestFilters: List[int] = []
         self.bestMasks: List[int] = []
         self.bestFiltersStr: List[str] = []
+        self.inputFile: str = ""
         self.outputFile: str = ""
         self.algorithm: str = "OPT"
 
         # parse comand line arguments and set canIds, idBitSize and numFilter
         self._parseArguments(argv)
+        
+        # read CAN IDs from given file
+        self._readIdsFromFile(self.inputFile)
+        
+        # check input values
+        self._checkInputValue()
 
     def calc(self) -> Tuple[List[List[str]], List[str], int] :
         '''Calculate CAN Filter.
@@ -389,7 +398,40 @@ class CanFilterCalc:
         
         self.algorithm = self.cmdArgs.algorithm
 
-        self._readIdsFromFile(self.cmdArgs.file)
+        self.inputFile = self.cmdArgs.file
+
+    def _checkInputValue(self) -> None:
+        '''Checks given input values.
+        '''
+        
+        maxIdSize = math.pow(2, self.idBitSize)
+
+        # check for valid CAN IDs
+        for canId in self.canIds:
+            if canId < 0:
+                raise ValueError("CAN ID: " + str(canId) + " is negative")
+            elif canId > maxIdSize:
+                raise ValueError("CAN ID: " + str(canId) + " exceeds bit size")
+            elif self.canIds.count(canId) > 1:
+                raise ValueError("CAN ID: " + str(canId) + " is duplicate")
+            
+        # check filter number and ID number
+        if len(self.canIds) <= self.numFilter:
+            raise ValueError("No calculation needed. Use one filter per message.")
+        
+        if self.numFilter < 0:
+            raise ValueError("Invalid number of filters: " + str(self.numFilter))
+        
+        # check file existance
+        if os.path.exists(self.inputFile) == False:
+            raise FileNotFoundError("Input file: " + self.inputFile + " not found.")  
+        elif os.path.isfile(self.inputFile) == False:
+            raise FileNotFoundError("This: " + self.inputFile + " is no file.")
+        elif self.outputFile != "":
+            if os.path.exists(self.outputFile) == False:
+                raise FileNotFoundError("Output file: " + self.outputFile + " not found.")  
+            elif os.path.isfile(self.outputFile) == False:
+                raise FileNotFoundError("This: " + self.outputFile + " is no file.")  
 
 
     def _readIdsFromFile(self, fileName: str) -> None:
