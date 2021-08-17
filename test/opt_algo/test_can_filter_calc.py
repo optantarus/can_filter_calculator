@@ -21,7 +21,7 @@ class can_filter_calc_test(unittest.TestCase):
         ref_filters = ['00000X1X1X1', '00000000010']
         ref_num = 6
         
-        canCalc = can_filter_calc.CanFilterCalc(['', '-f=test_can_ids_11bit.txt', '-o=result_test_11bit_ids.txt', '-s=11', '-n=2'])
+        canCalc = can_filter_calc.CanFilterCalc(['', '-f=test_data/test_can_ids_11bit.txt', '-o=results/result_test_11bit_ids.txt', '-s=11', '-n=2'])
         test_lists, test_filters, test_num = canCalc.calc()
         
         self.assertEqual(ref_lists, test_lists, 'Error in calculated lists.')
@@ -35,7 +35,7 @@ class can_filter_calc_test(unittest.TestCase):
         ref_filters = ['01100111100000000010000000001', '1100000000000010000010000000X']
         ref_num = 0
         
-        canCalc = can_filter_calc.CanFilterCalc(['', '-f=test_can_ids_29bit.txt', '-o=result_test_29bit_ids.txt', '-s=29', '-n=2'])
+        canCalc = can_filter_calc.CanFilterCalc(['', '-f=test_data/test_can_ids_29bit.txt', '-o=results/result_test_29bit_ids.txt', '-s=29', '-n=2'])
         test_lists, test_filters, test_num = canCalc.calc()
         
         self.assertEqual(ref_lists, test_lists, 'Error in calculated lists.')
@@ -50,9 +50,8 @@ class can_filter_calc_test(unittest.TestCase):
         ref_num = 0
         
         with self.assertRaises(ValueError):
-            canCalc = can_filter_calc.CanFilterCalc(['', '-f=test_can_ids_11bit.txt', '-o=result_test_calc_3_filters.txt', '-s=11', '-n=3'])
+            canCalc = can_filter_calc.CanFilterCalc(['', '-f=test_data/test_can_ids_11bit.txt', '-o=results/result_test_calc_3_filters.txt', '-s=11', '-n=3'])
             test_lists, test_filters, test_num = canCalc.calc()
-
 
 
 if __name__ == "__main__":

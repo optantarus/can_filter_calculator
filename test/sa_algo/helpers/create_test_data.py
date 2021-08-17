@@ -17,7 +17,7 @@ def createCanIdList():
     
     random.seed()
     
-    numberOfIds = random.randint(5, 11)
+    numberOfIds = random.randint(11, 100)
     
     for i in range(0, numberOfIds):
         canIdList.append("0x{num:0x}".format(num = random.randint(0, 2048)))
@@ -44,26 +44,26 @@ def main():
     
     for i in range(0, numberOfFiles):
         
-        fileName = "test_can_ids_11bit_" + str(i)
+        fileName = "test_large_can_ids_11bit_" + str(i)
         folderName = "../test_data/input/"
         
         # create test data
         canIdList = createCanIdList()
         writeToFile(canIdList, fileName, folderName)
         
-        for fil in range(filterMin, filterMax + 1): 
-            # calculate optimal solution
-            canCalc = can_filter_calc.CanFilterCalc(['', '-f='+folderName+fileName+'.txt', '-o=../test_data/output/result_opt_11bit_ids_' + str(fil) + '_fil_' + str(i) + '.txt', '-s=11', '-n=' + str(fil)])
-            test_lists, test_filters, test_num = canCalc.calc()
-        
-            results[fil].append(str(test_num))
+#         for fil in range(filterMin, filterMax + 1): 
+#             # calculate optimal solution
+#             canCalc = can_filter_calc.CanFilterCalc(['', '-f='+folderName+fileName+'.txt', '-o=../test_data/output/result_opt_11bit_ids_' + str(fil) + '_fil_' + str(i) + '.txt', '-s=11', '-n=' + str(fil)])
+#             test_lists, test_filters, test_num = canCalc.calc()
+#         
+#             results[fil].append(str(test_num))
         
     # write results file
-    for fil in range(filterMin, filterMax + 1):
-        fileName = "result_list_fil_" + str(fil) + "_messages_pass"
-        folderName = "../test_data/output/"
-        
-        writeToFile(results[fil], fileName, folderName)
+#     for fil in range(filterMin, filterMax + 1):
+#         fileName = "result_list_fil_" + str(fil) + "_messages_pass"
+#         folderName = "../test_data/output/"
+#         
+#         writeToFile(results[fil], fileName, folderName)
 
     
 if __name__ == '__main__':

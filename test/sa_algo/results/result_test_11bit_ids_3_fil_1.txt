@@ -1,9 +1,9 @@
 Calculated CAN Filters [ filter : number of unwanted passing messages ]:
-0b1X0X1XXXXX0 :   125 | 0bX0X1X0XXX1X :   125 | 0bXXXXXXX0X01 :   251
+0b1X0X1XXXXX0 :   125 | 0bXXXXXXX0X01 :   251 | 0bX0X1X0XXX1X :   125
 
 CAN messages assigned to filters [ bin : hex ]:
-0b10011111010 : 0x4fa | 0b00110011110 : 0x19e | 0b00010110001 : 0x0b1
-0b11001011110 : 0x65e | 0b00010010011 : 0x093 | 0b00110100101 : 0x1a5
-0b11011100100 : 0x6e4 | 0b10111000111 : 0x5c7 | 0b01101010101 : 0x355
-                      |                       | 0b10101100101 : 0x565
-                      |                       | 0b11000100001 : 0x621
+0b10011111010 : 0x4fa | 0b00110100101 : 0x1a5 | 0b00010010011 : 0x093
+0b11011100100 : 0x6e4 | 0b01101010101 : 0x355 | 0b10111000111 : 0x5c7
+0b11001011110 : 0x65e | 0b00010110001 : 0x0b1 | 0b00110011110 : 0x19e
+                      | 0b10101100101 : 0x565 |                      
+                      | 0b11000100001 : 0x621 |                      
