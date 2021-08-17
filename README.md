@@ -16,16 +16,24 @@ For license information see LICENSE.txt.
 
 ## Acknowledgments
 
-This tool uses the More Itertools library. Thanks to its developers.
+This tool uses the More Itertools library.
+
+The idea to use the simulated annealing algorithm comes from the following paper:
+
+> Florian Pölzlbauer, Robert I. Davis, and Iain Bate. 2017. Analysis and
+> Optimization of Message Acceptance Filter Configurations for Controller
+> Area Network (CAN). In Proceedings of RTNS ’17, Grenoble, France, October
+> 4–6, 2017, 10 pages.
+> <https://doi.org/10.1145/3139258.3139266>
 
 
 ## Prerequisities
 
 - Python3
-http://www.python.org/getit/
+<http://www.python.org/getit/>
 
 - More Itertools
-https://github.com/more-itertools/more-itertools
+<https://github.com/more-itertools/more-itertools>
 
 
 ## Usage
@@ -36,6 +44,7 @@ can_filter_calc.py is a command line tool. It needs to be called with the follow
 - '-s'    bit size of the CAN IDs (11 or 29)  
 - '-n'    number of filters to use  
 - '-o'    file to write results to (optional)  
+- '-a'    algorithm to use (optional): OPT tries all posibilities, SA uses simulated annealing to find a solution  
 
 So for example:  can_filter_calc.py -f=can_ids.txt -s=11 -n=2
 
