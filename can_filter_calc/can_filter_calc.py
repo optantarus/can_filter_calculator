@@ -18,8 +18,6 @@ import random
 
 import os.path
 
-import matplotlib.pyplot
-
 from typing import List, Tuple
 from operator import iand, ior
 from functools import reduce
@@ -96,19 +94,21 @@ class CanFilterCalc:
         mumPassMsgMax = self.numFilter*pow(2, self.idBitSize)
         
         lastTempUpdate = 0
+        lastBetterSolution = 0
         
         # parameters
-        repetitions= 5000
-        epochs = 100
-        temp = 1.0
+        repetitions= 50000
+        epochs = 1000
+        temp = 99.9
         coolingFactor = 0.95
         repWithSameTemp = 100
-        decTemp = temp / repetitions
+        repWithSameTempFactor = 1.1
+        
+        lastSolutionIncrease = 2000
         
         curTemp = temp
         
         # graph data
-        xAxis = range(0, repetitions*epochs)
         diff = 0
         accept = 0
         acceptList = []
@@ -116,6 +116,7 @@ class CanFilterCalc:
         searchValue = []
         tempValue = []
         diffValue = []
+        epochBest = []
         
         #initialize random number generator with system time (default)
         random.seed()
@@ -148,9 +149,9 @@ class CanFilterCalc:
                 else:
                     # accept new variant if a certain propablility
                     diff = (lengthPart - lengthPartOld) / mumPassMsgMax
-                    expo = diff / temp
+
                     #expoVal = random.expovariate(expo)
-                    expoVal = math.exp(-expo/temp)
+                    expoVal = math.exp(-diff/curTemp)
                     uniVal = random.random()
                     
                     if expoVal >= uniVal:
@@ -164,40 +165,33 @@ class CanFilterCalc:
                     self.bestMasks = masksPart
                     self.bestLists = newLists
                     self.passMessagesMin = passMessages
+                    lastBetterSolution = i
                 
                 # save value for graph view
                 bestValue.append(self.minLength)
                 searchValue.append(lengthPart)
                 diffValue.append(diff)
-                tempValue.append(temp)
-                acceptList.append(accept)
+                tempValue.append(curTemp)
+                acceptList.append(accept / (i + 1))
                 
                 # decrease temperature
-                if repWithSameTemp > (i-lastTempUpdate):
+                if repWithSameTemp <= (i-lastTempUpdate):
                     lastTempUpdate = i  
                     curTemp = curTemp * coolingFactor
-                 
-                #temp = temp - decTemp
-                
+                    repWithSameTemp = repWithSameTemp * repWithSameTempFactor
+                    
+                # check for additional end critera
+                if lastSolutionIncrease < (i - lastBetterSolution):
+                    break
+
+             
             lastTempUpdate = 0
+            lastBetterSolution = 0
             curTemp = temp
             filtersList = self.createStartSolution()
             lengthPartOld = lengthPartOldStart
-        
-        # draw plots    
-        matplotlib.pyplot.plot(xAxis, bestValue, label = "best")
-        matplotlib.pyplot.plot(xAxis, searchValue, label = "search")
-        matplotlib.pyplot.legend()
-        
-        matplotlib.pyplot.figure()
-        matplotlib.pyplot.plot(xAxis, tempValue, label = "temp")
-        matplotlib.pyplot.plot(xAxis, diffValue, label = "diff")
-        
-        matplotlib.pyplot.figure()
-        matplotlib.pyplot.plot(xAxis, acceptList, label = "accept")
-        matplotlib.pyplot.legend()
-        
-        #matplotlib.pyplot.show()
+            
+            epochBest.append(self.minLength)
             
         
     def createStartSolution(self):
@@ -206,6 +200,7 @@ class CanFilterCalc:
         
         # sort CAN ID list
         self.canIds.sort()
+        
         # assign equal number of CAN IDs to each filter
         listsIt = list(more_itertools.divide(self.numFilter, self.canIds))
         
@@ -427,11 +422,7 @@ class CanFilterCalc:
             raise FileNotFoundError("Input file: " + self.inputFile + " not found.")  
         elif os.path.isfile(self.inputFile) == False:
             raise FileNotFoundError("This: " + self.inputFile + " is no file.")
-        elif self.outputFile != "":
-            if os.path.exists(self.outputFile) == False:
-                raise FileNotFoundError("Output file: " + self.outputFile + " not found.")  
-            elif os.path.isfile(self.outputFile) == False:
-                raise FileNotFoundError("This: " + self.outputFile + " is no file.")  
+
 
 
     def _readIdsFromFile(self, fileName: str) -> None:
